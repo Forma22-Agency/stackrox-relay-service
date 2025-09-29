@@ -86,9 +86,28 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
     if not image:
         raise HTTPException(status_code=400, detail="cannot determine image from webhook payload")
 
+    # Extract tag explicitly (if present in payload) or derive from image string
+    tag = get_path(payload, ["alert", "alert", "deployment", "containers", 0, "image", "name", "tag"]) or \
+          get_path(payload, ["alert", "deployment", "containers", 0, "image", "name", "tag"]) or \
+          get_path(payload, ["image", "name", "tag"]) or None
+
+    if not tag:
+        # Parse tag from full image reference if available
+        def parse_tag(ref: str) -> str | None:
+            if not isinstance(ref, str):
+                return None
+            name_part = ref.split("@", 1)[0]
+            last_colon = name_part.rfind(":")
+            last_slash = name_part.rfind("/")
+            if last_colon > last_slash:
+                return name_part[last_colon + 1 :]
+            return None
+
+        tag = parse_tag(image)
+
     body = {
         "event_type": EVENT_TYPE,
-        "client_payload": {"image": image},
+        "client_payload": {"image": image, **({"tag": tag} if tag else {})},
     }
 
     url = f"https://api.github.com/repos/{GH_OWNER}/{GH_REPO}/dispatches"
