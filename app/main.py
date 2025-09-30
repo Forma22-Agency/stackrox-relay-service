@@ -24,6 +24,11 @@ async def healthz():
 async def root():
     return {"service": "gh-dispatch-relay", "status": "ok"}
 
+# Lightweight check endpoint for the webhook path (GET/HEAD)
+@APP.get("/webhook")
+async def webhook_probe():
+    return {"status": "ok", "hint": "POST JSON payload to this endpoint"}
+
 # --- Webhook (POST only) ---
 @APP.post("/webhook")
 async def webhook(req: Request, x_acs_token: str | None = Header(None)):
