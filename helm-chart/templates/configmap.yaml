@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+  {{- include "stackrox-relay-service.labels" . | nindent 4 }}
+data:
+  GH_OWNER: {{ .Values.configmap.GH_OWNER }}
+  GH_REPO: {{ .Values.configmap.GH_REPO }}
+  GITHUB_API_VERSION: {{ .Values.configmap.GITHUB_API_VERSION }}
+  EVENT_TYPE: {{ .Values.configmap.EVENT_TYPE }}
+  ACS_WEBHOOK_SECRET: {{ .Values.configmap.ACS_WEBHOOK_SECRET }}
+  GH_TOKEN: {{ .Values.configmap.GH_TOKEN }}

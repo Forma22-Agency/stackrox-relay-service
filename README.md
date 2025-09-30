@@ -9,14 +9,17 @@ The service is configured using the following environment variables:
 - `GH_OWNER`: The owner of the repository to send the events to.
 - `GH_REPO`: The repository to send the events to.
 - `GH_TOKEN`: The token to use to authenticate with GitHub.
-- `ACS_WEBHOOK_SECRET`: Shared secret used to authenticate ACS Generic Webhook requests (header `X-ACS-TOKEN`).
+- `GITHUB_API_VERSION`: The version of the GitHub API to use.
+- `EVENT_TYPE`: The type of event to send to GitHub.
+- `STACKROX_WEBHOOK_SECRET`: The secret to use to authenticate with StackRox.
 
-## ACS Generic Webhook setup
 
-In ACS → Platform Configuration → Integrations → Notifiers → Generic Webhook:
+## StackRox Generic Webhook setup
 
-- Endpoint: `https://relay.example.com/webhook` (or the in-cluster service address if ACS Central runs in the same cluster/VPC)
-- Headers: `X-ACS-TOKEN: <value of ACS_WEBHOOK_SECRET>`
+In StackRox → Platform Configuration → Integrations → Notifiers → Generic Webhook:
+
+- Endpoint: `https://relay.example.com/webhook` (or the in-cluster service address if StackRox Central runs in the same cluster/VPC)
+- Headers: `X-ACS-TOKEN: <value of STACKROX_WEBHOOK_SECRET>`
 - Extra fields: not required — the relay adds `event_type` and `client_payload` automatically.
 
-Attach your policy (e.g., "No Critical CVEs") to this notifier in Enforce on Admission mode. When a deployment is blocked, ACS will send an event to the relay.
+Attach your policy (e.g., "No Critical CVEs") to this notifier in Enforce on Admission mode. When a deployment is blocked, StackRox will send an event to the relay.

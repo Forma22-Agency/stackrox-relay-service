@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "stackrox-relay-service.fullname" . }}
+  labels:
+    app: {{ .Release.Name }}
+  {{- include "stackrox-relay-service.labels" . | nindent 4 }}
+  annotations: {{- toYaml .Values.deployment.annotations | nindent 4 }}
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  strategy:
+    type: {{ .Values.deployment.strategy.type | quote }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+    {{- include "stackrox-relay-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}
+      {{- include "stackrox-relay-service.selectorLabels" . | nindent 8 }}
+      annotations:
+        deploy: v1
+    spec:
+      serviceAccountName: {{ .Values.deployment.serviceAccount }}
+      containers:
+      - image: {{ .Values.deployment.image.repository }}:{{ .Values.deployment.image.tag }}
+        imagePullPolicy: {{ .Values.deployment.imagePullPolicy }}
+        name: {{ .Release.Name }}
+        envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}
+        ports: {{- toYaml .Values.deployment.ports | nindent 10 }}
+        readinessProbe: {{- toYaml .Values.deployment.readinessProbe | nindent 10 }}
+        livenessProbe: {{- toYaml .Values.deployment.livenessProbe | nindent 10 }}
+        resources: {{- toYaml .Values.deployment.resources | nindent 10 }}
+        volumeMounts:
+        - name: stackrox-relay-config
+          mountPath: /app/config
+          readOnly: true
+        securityContext: {{- toYaml .Values.deployment.containerSecurityContext | nindent 10 }}
+      restartPolicy: Always
+      volumes:
+      - name: stackrox-relay-config
+        configMap:
+          name: {{ .Release.Name }}

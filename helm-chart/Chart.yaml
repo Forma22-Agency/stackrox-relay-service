@@ -1,0 +1,3 @@
+apiVersion: v2
+name: stackrox-relay-service
+version: 0.0.1
