@@ -32,4 +32,4 @@ jobs:
       with:
         push: true
         platforms: linux/amd64,linux/arm64
-        tags: ghcr.io/igorgolm/stackrox-relay-service:${{ github.sha }}
+        tags: ghcr.io/Forma22-Agency/stackrox-relay-service:${{ github.sha }}

@@ -43,7 +43,7 @@ deployment:
     failureThreshold: 3
 
   image:
-    repository: ghcr.io/igorgolm/stackrox-relay-service
+    repository: ghcr.io/Forma22-Agency/stackrox-relay-service
     tag: 97daacacb665a52e38a21bddecd92a2aa83054df
 
 configmap:

@@ -21,5 +21,3 @@ In StackRox → Platform Configuration → Integrations → Notifiers → Generi
 - Endpoint: `https://relay.example.com/webhook` (or the in-cluster service address if StackRox Central runs in the same cluster/VPC)
 - Headers: `X-ACS-TOKEN: <value of STACKROX_WEBHOOK_SECRET>`
 - Extra fields: not required — the relay adds `event_type` and `client_payload` automatically.
-
-Attach your policy (e.g., "No Critical CVEs") to this notifier in Enforce on Admission mode. When a deployment is blocked, StackRox will send an event to the relay.
