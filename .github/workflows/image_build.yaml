@@ -39,16 +39,7 @@ jobs:
 
     - name: Build and push
       uses: docker/build-push-action@v6
-      if: github.base_ref != 'main'
       with:
-        push: false
-        platforms: linux/amd64,linux/arm64
-        tags: ghcr.io/forma22-agency/stackrox-relay-service:${{ github.sha }}
-
-    - name: Build and push
-      uses: docker/build-push-action@v6
-      if: github.base_ref == 'main'
-      with:
-        push: true
+        push: ${{ github.event_name != 'pull_request' }}
         platforms: linux/amd64,linux/arm64
         tags: ghcr.io/forma22-agency/stackrox-relay-service:${{ github.sha }}
