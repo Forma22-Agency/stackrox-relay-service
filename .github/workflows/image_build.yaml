@@ -8,6 +8,14 @@ on:
       - 'Dockerfile'
       - 'app/**'
       - 'requirements.txt'
+  pull_request:
+    branches:
+      - main
+    types: [ opened, synchronize, reopened ]
+    paths:
+      - 'Dockerfile'
+      - 'app/**'
+      - 'requirements.txt'
 
 jobs:
   build_image:
@@ -32,6 +40,6 @@ jobs:
     - name: Build and push
       uses: docker/build-push-action@v6
       with:
-        push: true
+        push: ${{ github.event_name != 'pull_request' }}
         platforms: linux/amd64,linux/arm64
         tags: ghcr.io/forma22-agency/stackrox-relay-service:${{ github.sha }}
