@@ -26,6 +26,7 @@ jobs:
       uses: helm/chart-releaser-action@v1.7.0
       with:
         charts_dir: helm-chart
+      env:
         CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
 
     - name: Run helm-docs
