@@ -49,11 +49,14 @@ deployment:
 # Use plain text values for the app secrets
 configmap:
   GH_OWNER: "igorgolm"
-  GH_REPO: "aws-cd-georgia-demo-app" # Repo where replay need access to dispatch events
+  # Repo where replay need access to dispatch events
+  GH_REPO: "aws-cd-georgia-demo-app"
   GITHUB_API_VERSION: "2022-11-28"
   EVENT_TYPE: "stackrox_copa"
-  ACS_WEBHOOK_SECRET: "super-secret" # Random secret for StackRox webhook
-  GH_TOKEN: "" # optional, if you want to use a GitHub PAT token without a external secret
+  # Random secret for StackRox webhook
+  ACS_WEBHOOK_SECRET: "super-secret"
+  # optional, if you want to use a GitHub PAT token without a external secret
+  GH_TOKEN: ""
 
 # Use external secrets for the app secrets
 externalSecrets:
@@ -64,12 +67,14 @@ externalSecrets:
     name: gcp-clustersecretstore
     creationPolicy: Owner
     token:
-      enabled: true  # if you want to use a GitHub PAT token
+       # if you want to use a GitHub PAT token
+      enabled: true
       parameters:
         name: stackrox-relay-gh-token
         remoteSecretKey: stackrox-relay-gh-token
     app:
-      enabled: false # if you want to use a GitHub App
+      # if you want to use a GitHub App
+      enabled: false
       parameters:
         githubAppID: 1234567890
         githubAppInstallationID: 1234567890
