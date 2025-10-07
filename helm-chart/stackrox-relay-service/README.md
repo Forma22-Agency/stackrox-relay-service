@@ -1,17 +1,17 @@
 # stackrox-relay-service
 
-![Version: 0.0.1](https://img.shields.io/badge/Version-0.0.1-informational?style=flat-square)
+![Version: 0.0.5](https://img.shields.io/badge/Version-0.0.5-informational?style=flat-square)
 
 ## Values
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| configmap.ACS_WEBHOOK_SECRET | string | `"super-secret"` |  |
 | configmap.EVENT_TYPE | string | `"stackrox_copa"` |  |
-| configmap.GH_OWNER | string | `"example"` |  |
-| configmap.GH_REPO | string | `"example-repo"` |  |
+| configmap.GH_OWNER | string | `"igorgolm"` |  |
+| configmap.GH_REPO | string | `"aws-cd-georgia-demo-app"` |  |
 | configmap.GH_TOKEN | string | `""` |  |
 | configmap.GITHUB_API_VERSION | string | `"2022-11-28"` |  |
-| configmap.STACKROX_WEBHOOK_SECRET | string | `"super-secret"` |  |
 | deployment.containerSecurityContext.allowPrivilegeEscalation | bool | `false` |  |
 | deployment.containerSecurityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | deployment.containerSecurityContext.privileged | bool | `false` |  |
@@ -19,8 +19,8 @@
 | deployment.containerSecurityContext.runAsNonRoot | bool | `true` |  |
 | deployment.containerSecurityContext.runAsUser | int | `1001` |  |
 | deployment.containerSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| deployment.image.repository | string | `"ghcr.io/igorgolm/stackrox-relay-service"` |  |
-| deployment.image.tag | string | `"5c2b370fceef0e2c66dc1594d75e8358a259e1d6"` |  |
+| deployment.image.repository | string | `"ghcr.io/Forma22-Agency/stackrox-relay-service"` |  |
+| deployment.image.tag | string | `"97daacacb665a52e38a21bddecd92a2aa83054df"` |  |
 | deployment.imagePullPolicy | string | `"Always"` |  |
 | deployment.livenessProbe.failureThreshold | int | `3` |  |
 | deployment.livenessProbe.httpGet.path | string | `"/healthz"` |  |
@@ -28,6 +28,8 @@
 | deployment.livenessProbe.initialDelaySeconds | int | `10` |  |
 | deployment.livenessProbe.periodSeconds | int | `15` |  |
 | deployment.livenessProbe.timeoutSeconds | int | `5` |  |
+| deployment.ports[0].containerPort | int | `8080` |  |
+| deployment.ports[0].name | string | `"http"` |  |
 | deployment.readinessProbe.failureThreshold | int | `3` |  |
 | deployment.readinessProbe.httpGet.path | string | `"/healthz"` |  |
 | deployment.readinessProbe.httpGet.port | int | `8080` |  |
@@ -41,8 +43,21 @@
 | deployment.resources.requests.memory | string | `"100Mi"` |  |
 | deployment.serviceAccount | string | `"stackrox-relay"` |  |
 | deployment.strategy.type | string | `"RollingUpdate"` |  |
+| externalSecrets.data.app.enabled | bool | `false` |  |
+| externalSecrets.data.app.parameters.githubAppID | int | `1234567890` |  |
+| externalSecrets.data.app.parameters.githubAppInstallationID | int | `1234567890` |  |
+| externalSecrets.data.app.parameters.remoteSecretKey | string | `"stackrox-relay-gh-app-pk"` |  |
+| externalSecrets.data.creationPolicy | string | `"Owner"` |  |
+| externalSecrets.data.kind | string | `"ClusterSecretStore"` |  |
+| externalSecrets.data.name | string | `"gcp-clustersecretstore"` |  |
+| externalSecrets.data.refreshInterval | string | `"1h"` |  |
+| externalSecrets.data.token.enabled | bool | `true` |  |
+| externalSecrets.data.token.parameters.name | string | `"stackrox-relay-gh-token"` |  |
+| externalSecrets.data.token.parameters.remoteSecretKey | string | `"stackrox-relay-gh-token"` |  |
+| externalSecrets.enabled | bool | `true` |  |
 | service.ports.name | string | `"http"` |  |
-| service.ports.port | int | `8080` |  |
+| service.ports.port | int | `80` |  |
+| service.ports.targetPort | int | `8080` |  |
 | service.type | string | `"ClusterIP"` |  |
 
 ----------------------------------------------
