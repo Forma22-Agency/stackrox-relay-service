@@ -29,9 +29,11 @@ jobs:
         version: v3.17.0
 
     - name: Set up chart-testing
+      if: github.event_name == 'pull_request'
       uses: helm/chart-testing-action@v2.7.0
 
     - name: Run chart-testing (list-changed)
+      if: github.event_name == 'pull_request'
       id: list-changed
       run: |
         changed=$(ct list-changed --config ct.yaml)
@@ -41,7 +43,7 @@ jobs:
         fi
 
     - name: Run chart-testing (lint)
-      if: steps.list-changed.outputs.changed == 'true'
+      if: steps.list-changed.outputs.changed == 'true' && github.event_name == 'pull_request'
       run: ct lint --config ct.yaml
 
     - name: Run chart-releaser
