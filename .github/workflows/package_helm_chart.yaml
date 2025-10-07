@@ -26,7 +26,7 @@ jobs:
     - name: Run chart-testing (list-changed)
       id: list-changed
       run: |
-        changed=$(ct list-changed --config ct.yaml)
+        changed=$(ct list-changed --config ../ct.yaml)
         echo "changed: $changed"
         if [[ -n "$changed" ]]; then
           echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -34,10 +34,17 @@ jobs:
 
     - name: Run chart-testing (lint)
       if: steps.list-changed.outputs.changed == 'true'
-      run: ct lint --config ct.yaml
+      run: ct lint --config ../ct.yaml
 
     - name: Run chart-releaser
       uses: helm/chart-releaser-action@v1.7.0
       env:
-        charts_dir: helm-chart
+        charts_dir: helm-chart/stackrox-relay-service
         CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+    - name: Run helm-docs
+      uses: losisin/helm-docs-github-action@v1
+      with:
+        git-push: true
+        git-commit-message: "chore: update Helm documentation [skip ci]"
+        chart-search-root: helm-chart/stackrox-relay-service

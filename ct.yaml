@@ -1,7 +1,7 @@
 remote: origin
 target-branch: main
 chart-dirs:
-- helm-chart/
+- helm-chart/stackrox-relay-service
 helm-extra-args: --timeout 600s
 validate-maintainers: false
 validate-yaml: true
