@@ -1,11 +1,13 @@
 remote: origin
 target-branch: main
 chart-dirs:
-- helm-chart/stackrox-relay-service
-helm-extra-args: --timeout 600s
+- helm-chart/
 validate-maintainers: false
 validate-yaml: true
-process-all-charts: false
+process-all-charts: true
 print-config: true
 check-version-increment: true
-debug: true
+validate-chart-schema: true
+debug: false
+excluded-charts:
+  - .github
