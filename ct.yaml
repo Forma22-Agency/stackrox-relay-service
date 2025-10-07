@@ -9,5 +9,4 @@ print-config: true
 check-version-increment: true
 validate-chart-schema: true
 debug: false
-excluded-charts:
-  - .github
+helm-extra-args: --timeout 600s
