@@ -9,6 +9,9 @@ on:
   pull_request:
     branches:
       - main
+    types: [ opened, synchronize, reopened ]
+    paths:
+      - 'helm-chart/**'
 
 jobs:
   package_helm_chart:
@@ -36,7 +39,6 @@ jobs:
         fi
 
     - name: Run chart-testing (lint)
-      env:
       if: steps.list-changed.outputs.changed == 'true'
       run: ct lint --config ct.yaml
 
