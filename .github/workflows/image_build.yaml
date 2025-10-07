@@ -1,4 +1,4 @@
-name: Build and push
+name: Build and push image
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - 'helm-chart/**'
 
 jobs:
-  build:
+  build_image:
     runs-on: ubuntu-latest
     permissions:
       contents: read

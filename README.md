@@ -30,7 +30,6 @@ Health:
 
 - `GET /healthz` returns `ok` if `GH_OWNER` and `GH_REPO` are set and either `GH_TOKEN` or a valid GitHub App configuration is present; otherwise `degraded`.
 
-
 ## StackRox Generic Webhook setup
 
 In StackRox → Platform Configuration → Integrations → Notifiers → Generic Webhook:

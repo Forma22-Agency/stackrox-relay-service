@@ -46,13 +46,34 @@ deployment:
     repository: ghcr.io/Forma22-Agency/stackrox-relay-service
     tag: 97daacacb665a52e38a21bddecd92a2aa83054df
 
+# Use plain text values for the app secrets
 configmap:
   GH_OWNER: "igorgolm"
   GH_REPO: "aws-cd-georgia-demo-app" # Repo where replay need access to dispatch events
   GITHUB_API_VERSION: "2022-11-28"
   EVENT_TYPE: "stackrox_copa"
   ACS_WEBHOOK_SECRET: "super-secret" # Random secret for StackRox webhook
-  GH_TOKEN: "" # GitHub PAT token
+  GH_TOKEN: "" # optional, if you want to use a GitHub PAT token without a external secret
+
+# Use external secrets for the app secrets
+externalSecrets:
+  enabled: true
+  data:
+    refreshInterval: 1h
+    kind: ClusterSecretStore
+    name: gcp-clustersecretstore
+    creationPolicy: Owner
+    token:
+      enabled: true  # if you want to use a GitHub PAT token
+      parameters:
+        name: stackrox-relay-gh-token
+        remoteSecretKey: stackrox-relay-gh-token
+    app:
+      enabled: false # if you want to use a GitHub App
+      parameters:
+        githubAppID: 1234567890
+        githubAppInstallationID: 1234567890
+        remoteSecretKey: stackrox-relay-gh-app-pk
 
 service:
   type: ClusterIP
