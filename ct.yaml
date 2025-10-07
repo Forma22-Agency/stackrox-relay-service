@@ -1,0 +1,11 @@
+remote: origin
+target-branch: main
+chart-dirs:
+- helm-chart/
+helm-extra-args: --timeout 600s
+validate-maintainers: false
+validate-yaml: true
+process-all-charts: false
+print-config: true
+check-version-increment: true
+debug: true
