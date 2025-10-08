@@ -13,15 +13,28 @@ EVENT_TYPE = os.getenv("EVENT_TYPE", "stackrox_copa")
 API_VER = os.getenv("GITHUB_API_VERSION", "2022-11-28")
 ACS_WEBHOOK_SECRET = os.getenv("ACS_WEBHOOK_SECRET", "")
 
+# Multi-repo guard by topics (comma-separated list). If set, only repos
+# containing at least one (or all, depending on mode) of these topics will be allowed.
+_ALLOWED_TOPICS_RAW = os.getenv("GH_ALLOWED_TOPICS", "")
+ALLOWED_TOPICS = [t.strip().lower() for t in _ALLOWED_TOPICS_RAW.split(",") if t.strip()]
+ALLOWED_TOPICS_MODE = os.getenv("GH_ALLOWED_TOPICS_MODE", "any").lower()  # "any" or "all"
+
 # --- GitHub App configuration (optional) ---
 GITHUB_APP_ID = os.getenv("GITHUB_APP_ID")
 GITHUB_APP_INSTALLATION_ID = os.getenv("GITHUB_APP_INSTALLATION_ID")
 GITHUB_APP_PRIVATE_KEY = os.getenv("GITHUB_APP_PRIVATE_KEY")
 GITHUB_APP_PRIVATE_KEY_BASE64 = os.getenv("GITHUB_APP_PRIVATE_KEY_BASE64")
 
-# Simple in-memory cache for installation token
-_INSTALLATION_TOKEN: dict | None = None  # {"token": str, "expires_at": epoch_seconds}
-_CACHED_INSTALLATION_ID: int | None = int(GITHUB_APP_INSTALLATION_ID) if GITHUB_APP_INSTALLATION_ID else None
+# Simple in-memory caches for installation discovery and tokens
+# Map installation id -> {"token": str, "expires_at": epoch_seconds}
+_INSTALLATION_TOKEN_BY_ID: dict[int, dict] = {}
+# Map owner (org/user) -> installation id
+_CACHED_INSTALLATION_ID_BY_OWNER: dict[str, int] = {}
+if GITHUB_APP_INSTALLATION_ID and GH_OWNER:
+    try:
+        _CACHED_INSTALLATION_ID_BY_OWNER[GH_OWNER] = int(GITHUB_APP_INSTALLATION_ID)
+    except Exception:
+        pass
 
 def _is_github_app_configured() -> bool:
     return bool(GITHUB_APP_ID and (GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_BASE64))
@@ -62,14 +75,14 @@ def _build_app_jwt() -> str:
         raise HTTPException(status_code=500, detail=f"failed to sign GitHub App JWT: {exc}")
     return token
 
-async def _get_installation_id(client: httpx.AsyncClient) -> int:
-    global _CACHED_INSTALLATION_ID
-    if _CACHED_INSTALLATION_ID is not None:
-        return _CACHED_INSTALLATION_ID
+async def _get_installation_id(client: httpx.AsyncClient, owner: str, repo: str) -> int:
+    # Cached per owner, as installation is bound to account (org/user)
+    if owner in _CACHED_INSTALLATION_ID_BY_OWNER:
+        return _CACHED_INSTALLATION_ID_BY_OWNER[owner]
 
-    # Discover installation for the configured repository
+    # Discover installation for the target repository
     jwt_token = _build_app_jwt()
-    url = f"https://api.github.com/repos/{GH_OWNER}/{GH_REPO}/installation"
+    url = f"https://api.github.com/repos/{owner}/{repo}/installation"
     headers = {
         "Authorization": f"Bearer {jwt_token}",
         "Accept": "application/vnd.github+json",
@@ -82,17 +95,17 @@ async def _get_installation_id(client: httpx.AsyncClient) -> int:
     inst_id = data.get("id")
     if not isinstance(inst_id, int):
         raise HTTPException(status_code=500, detail="invalid installation id in response")
-    _CACHED_INSTALLATION_ID = inst_id
+    _CACHED_INSTALLATION_ID_BY_OWNER[owner] = inst_id
     return inst_id
 
-async def _get_installation_token(client: httpx.AsyncClient) -> str:
-    global _INSTALLATION_TOKEN
-    # Return cached token if valid for at least 60 seconds
-    if _INSTALLATION_TOKEN and _INSTALLATION_TOKEN.get("token") and _INSTALLATION_TOKEN.get("expires_at", 0) - 60 > time.time():
-        return _INSTALLATION_TOKEN["token"]
+async def _get_installation_token(client: httpx.AsyncClient, owner: str, repo: str) -> str:
+    # Return cached token for this installation if valid for at least 60 seconds
+    installation_id = await _get_installation_id(client, owner, repo)
+    cached = _INSTALLATION_TOKEN_BY_ID.get(installation_id)
+    if cached and cached.get("token") and cached.get("expires_at", 0) - 60 > time.time():
+        return cached["token"]
 
     jwt_token = _build_app_jwt()
-    installation_id = await _get_installation_id(client)
     url = f"https://api.github.com/app/installations/{installation_id}/access_tokens"
     headers = {
         "Authorization": f"Bearer {jwt_token}",
@@ -116,13 +129,13 @@ async def _get_installation_token(client: httpx.AsyncClient) -> str:
         # Fallback: keep a short TTL if parsing fails
         expires_epoch = int(time.time()) + 8 * 60
 
-    _INSTALLATION_TOKEN = {"token": token, "expires_at": expires_epoch}
+    _INSTALLATION_TOKEN_BY_ID[installation_id] = {"token": token, "expires_at": expires_epoch}
     return token
 
-async def _build_github_headers(client: httpx.AsyncClient) -> dict:
+async def _build_github_headers(client: httpx.AsyncClient, owner: str, repo: str) -> dict:
     # Prefer GitHub App if configured; fallback to GH_TOKEN
     if _is_github_app_configured():
-        inst_token = await _get_installation_token(client)
+        inst_token = await _get_installation_token(client, owner, repo)
         return {
             "Authorization": f"token {inst_token}",
             "Accept": "application/vnd.github+json",
@@ -138,13 +151,54 @@ async def _build_github_headers(client: httpx.AsyncClient) -> dict:
         "Content-Type": "application/json",
     }
 
+def _derive_owner_repo_from_image(image_ref: str) -> tuple[str, str] | None:
+    """Try to derive GitHub owner/repo from ghcr image reference.
+    Examples:
+      ghcr.io/acme/awesome:1.2.3 -> (acme, awesome)
+      ghcr.io/acme/awesome@sha256:... -> (acme, awesome)
+    Returns None if cannot derive reliably.
+    """
+    if not isinstance(image_ref, str):
+        return None
+    try:
+        ref = image_ref.split("@", 1)[0]
+        if ref.startswith("ghcr.io/"):
+            path = ref[len("ghcr.io/"):]
+            parts = path.split(":", 1)[0].split("/")
+            if len(parts) >= 2:
+                owner, repo = parts[0], parts[1]
+                if owner and repo:
+                    return owner, repo
+    except Exception:
+        return None
+    return None
+
+async def _repo_topics_allow(client: httpx.AsyncClient, owner: str, repo: str) -> bool:
+    """If ALLOWED_TOPICS is configured, ensure the target repo has required topics.
+    Mode any/all controlled by ALLOWED_TOPICS_MODE.
+    If ALLOWED_TOPICS empty, always allow.
+    """
+    if not ALLOWED_TOPICS:
+        return True
+    headers = await _build_github_headers(client, owner, repo)
+    url = f"https://api.github.com/repos/{owner}/{repo}/topics"
+    r = await client.get(url, headers=headers)
+    if r.status_code != 200:
+        # Conservative: deny if we cannot validate
+        raise HTTPException(status_code=r.status_code, detail=f"failed to read repo topics: {r.text}")
+    data = r.json() or {}
+    names = [str(t).lower() for t in data.get("names", [])]
+    if ALLOWED_TOPICS_MODE == "all":
+        return all(t in names for t in ALLOWED_TOPICS)
+    # default: any
+    return any(t in names for t in ALLOWED_TOPICS)
+
 # --- Health endpoints ---
 @APP.get("/healthz")
 async def healthz():
-    # Simple check for important variables
-    base_ok = all([GH_OWNER, GH_REPO])
+    # In multi-repo mode GH_REPO may be omitted. Consider only creds.
     creds_ok = bool(GH_TOKEN) or _is_github_app_configured()
-    ok = base_ok and creds_ok
+    ok = creds_ok
     return {"status": "ok" if ok else "degraded"}
 
 @APP.get("/")
@@ -242,11 +296,31 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
         "client_payload": {"image": image, **({"tag": tag} if tag else {})},
     }
 
-    url = f"https://api.github.com/repos/{GH_OWNER}/{GH_REPO}/dispatches"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        headers = await _build_github_headers(client)
-        r = await client.post(url, headers=headers, content=json.dumps(body))
-    if r.status_code != 204:
-        raise HTTPException(status_code=r.status_code, detail=r.text)
+    # Choose single target repository by image basename: GH_OWNER/<image_basename>
+    def _guess_repo_from_image(ref: str) -> str | None:
+        if not isinstance(ref, str) or not ref:
+            return None
+        # Strip digest and tag
+        without_digest = ref.split("@", 1)[0]
+        without_tag = without_digest.rsplit(":", 1)[0]
+        # Take last path segment
+        parts = without_tag.split("/")
+        if parts:
+            name = parts[-1].strip()
+            return name or None
+        return None
 
-    return {"ok": True}
+    repo_name = _guess_repo_from_image(image)
+    if not GH_OWNER or not repo_name:
+        raise HTTPException(status_code=400, detail="cannot determine target repository: need GH_OWNER and image basename")
+
+    owner, repo = GH_OWNER, repo_name
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        if ALLOWED_TOPICS and not await _repo_topics_allow(client, owner, repo):
+            raise HTTPException(status_code=403, detail="repository is not allowed by topics policy")
+        headers = await _build_github_headers(client, owner, repo)
+        url = f"https://api.github.com/repos/{owner}/{repo}/dispatches"
+        r = await client.post(url, headers=headers, content=json.dumps(body))
+        if r.status_code != 204:
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+    return {"ok": True, "repository": f"{owner}/{repo}"}
