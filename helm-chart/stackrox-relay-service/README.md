@@ -1,6 +1,6 @@
 # stackrox-relay-service
 
-![Version: 0.0.1](https://img.shields.io/badge/Version-0.0.1-informational?style=flat-square)
+![Version: 0.0.2](https://img.shields.io/badge/Version-0.0.2-informational?style=flat-square)
 
 ## Values
 
@@ -8,8 +8,9 @@
 |-----|------|---------|-------------|
 | configmap.ACS_WEBHOOK_SECRET | string | `"super-secret"` |  |
 | configmap.EVENT_TYPE | string | `"stackrox_copa"` |  |
-| configmap.GH_OWNER | string | `"igorgolm"` |  |
-| configmap.GH_REPO | string | `"aws-cd-georgia-demo-app"` |  |
+| configmap.GH_ALLOWED_TOPICS | string | `"stackrox-copa"` |  |
+| configmap.GH_ALLOWED_TOPICS_MODE | string | `"any"` |  |
+| configmap.GH_OWNER | string | `"forma22-agency"` |  |
 | configmap.GH_TOKEN | string | `""` |  |
 | configmap.GITHUB_API_VERSION | string | `"2022-11-28"` |  |
 | deployment.containerSecurityContext.allowPrivilegeEscalation | bool | `false` |  |
@@ -19,8 +20,8 @@
 | deployment.containerSecurityContext.runAsNonRoot | bool | `true` |  |
 | deployment.containerSecurityContext.runAsUser | int | `1001` |  |
 | deployment.containerSecurityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
-| deployment.image.repository | string | `"ghcr.io/Forma22-Agency/stackrox-relay-service"` |  |
-| deployment.image.tag | string | `"97daacacb665a52e38a21bddecd92a2aa83054df"` |  |
+| deployment.image.repository | string | `"ghcr.io/forma22-agency/stackrox-relay-service"` |  |
+| deployment.image.tag | string | `"c666371b7a6ebba7ec87bcc715c1ed171108aeb0"` |  |
 | deployment.imagePullPolicy | string | `"Always"` |  |
 | deployment.livenessProbe.failureThreshold | int | `3` |  |
 | deployment.livenessProbe.httpGet.path | string | `"/healthz"` |  |
