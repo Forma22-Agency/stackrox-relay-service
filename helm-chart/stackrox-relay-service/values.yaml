@@ -43,16 +43,21 @@ deployment:
     failureThreshold: 3
 
   image:
-    repository: ghcr.io/Forma22-Agency/stackrox-relay-service
-    tag: 97daacacb665a52e38a21bddecd92a2aa83054df
+    repository: ghcr.io/forma22-agency/stackrox-relay-service
+    tag: c666371b7a6ebba7ec87bcc715c1ed171108aeb0
 
 # Use plain text values for the app secrets
 configmap:
-  GH_OWNER: "igorgolm"
+  GH_OWNER: "forma22-agency"
   # Repo where replay need access to dispatch events
-  GH_REPO: "aws-cd-georgia-demo-app"
   GITHUB_API_VERSION: "2022-11-28"
   EVENT_TYPE: "stackrox_copa"
+  # Optional: allow multi-repo mode by GitHub repository topics
+  # Comma-separated list of topics that must be present on target repo.
+  # If empty, any repo is allowed (subject to credentials).
+  GH_ALLOWED_TOPICS: "stackrox-copa"
+  # one of: any | all
+  GH_ALLOWED_TOPICS_MODE: "any"
   # Random secret for StackRox webhook
   ACS_WEBHOOK_SECRET: "super-secret"
   # optional, if you want to use a GitHub PAT token without a external secret
