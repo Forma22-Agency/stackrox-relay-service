@@ -1,12 +1,12 @@
 # stackrox-relay-service
 
-![Version: 0.0.3](https://img.shields.io/badge/Version-0.0.3-informational?style=flat-square)
+![Version: 0.0.4](https://img.shields.io/badge/Version-0.0.4-informational?style=flat-square)
 
 ## Values
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| configmap.ACS_WEBHOOK_SECRET | string | `"super-secret"` |  |
+| configmap.ACS_WEBHOOK_SECRET | string | `""` |  |
 | configmap.EVENT_TYPE | string | `"stackrox_copa"` |  |
 | configmap.GH_ALLOWED_TOPICS | string | `"stackrox-copa"` |  |
 | configmap.GH_ALLOWED_TOPICS_MODE | string | `"any"` |  |
@@ -44,18 +44,21 @@
 | deployment.resources.requests.memory | string | `"100Mi"` |  |
 | deployment.serviceAccount | string | `"stackrox-relay"` |  |
 | deployment.strategy.type | string | `"RollingUpdate"` |  |
+| externalSecrets.data.acsWebhookSecret.enabled | bool | `false` |  |
+| externalSecrets.data.acsWebhookSecret.parameters.remoteSecretKey | string | `"stackrox-relay-acs-webhook-secret"` |  |
 | externalSecrets.data.app.enabled | bool | `false` |  |
 | externalSecrets.data.app.parameters.githubAppID | int | `1234567890` |  |
 | externalSecrets.data.app.parameters.githubAppInstallationID | int | `1234567890` |  |
 | externalSecrets.data.app.parameters.remoteSecretKey | string | `"stackrox-relay-gh-app-pk"` |  |
 | externalSecrets.data.creationPolicy | string | `"Owner"` |  |
-| externalSecrets.data.kind | string | `"ClusterSecretStore"` |  |
-| externalSecrets.data.name | string | `"storage"` |  |
 | externalSecrets.data.refreshInterval | string | `"1h"` |  |
+| externalSecrets.data.secretStoreRef.kind | string | `"ClusterSecretStore"` |  |
+| externalSecrets.data.secretStoreRef.name | string | `"storage"` |  |
 | externalSecrets.data.token.enabled | bool | `false` |  |
 | externalSecrets.data.token.parameters.name | string | `"stackrox-relay-gh-token"` |  |
 | externalSecrets.data.token.parameters.remoteSecretKey | string | `"stackrox-relay-gh-token"` |  |
-| externalSecrets.enabled | bool | `true` |  |
+| externalSecrets.enabled | bool | `false` |  |
+| externalSecrets.name | string | `"stackrox-relay-service-secrets"` |  |
 | service.ports.name | string | `"http"` |  |
 | service.ports.port | int | `80` |  |
 | service.ports.targetPort | int | `8080` |  |
