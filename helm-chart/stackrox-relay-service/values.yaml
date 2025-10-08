@@ -69,11 +69,11 @@ externalSecrets:
   data:
     refreshInterval: 1h
     kind: ClusterSecretStore
-    name: gcp-clustersecretstore
+    name: storage
     creationPolicy: Owner
     token:
        # if you want to use a GitHub PAT token
-      enabled: true
+      enabled: false
       parameters:
         name: stackrox-relay-gh-token
         remoteSecretKey: stackrox-relay-gh-token
