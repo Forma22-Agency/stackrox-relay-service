@@ -10,7 +10,9 @@ data:
   GH_ALLOWED_TOPICS_MODE: {{ .Values.configmap.GH_ALLOWED_TOPICS_MODE }}
   GITHUB_API_VERSION: {{ .Values.configmap.GITHUB_API_VERSION }}
   EVENT_TYPE: {{ .Values.configmap.EVENT_TYPE }}
+  {{ if .Values.configmap.ACS_WEBHOOK_SECRET }}
   ACS_WEBHOOK_SECRET: {{ .Values.configmap.ACS_WEBHOOK_SECRET }}
+  {{ end }}
   {{ if .Values.configmap.GH_TOKEN }}
   GH_TOKEN: {{ .Values.configmap.GH_TOKEN }}
   {{ end }}

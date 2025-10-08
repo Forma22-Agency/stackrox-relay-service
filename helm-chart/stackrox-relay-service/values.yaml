@@ -58,19 +58,27 @@ configmap:
   GH_ALLOWED_TOPICS: "stackrox-copa"
   # one of: any | all
   GH_ALLOWED_TOPICS_MODE: "any"
-  # Random secret for StackRox webhook
-  ACS_WEBHOOK_SECRET: "super-secret"
+  # Optional: random secret for StackRox webhook
+  ACS_WEBHOOK_SECRET: ""
   # optional, if you want to use a GitHub PAT token without a external secret
   GH_TOKEN: ""
 
 # Use external secrets for the app secrets
 externalSecrets:
-  enabled: true
+  enabled: false
+  name: stackrox-relay-service-secrets
   data:
     refreshInterval: 1h
-    kind: ClusterSecretStore
-    name: storage
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: storage
     creationPolicy: Owner
+    # Secrets #
+    acsWebhookSecret:
+      # if you want to store the ACS webhook secret in a secret store
+      enabled: false
+      parameters:
+        remoteSecretKey: stackrox-relay-acs-webhook-secret
     token:
        # if you want to use a GitHub PAT token
       enabled: false
