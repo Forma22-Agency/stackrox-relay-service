@@ -2,6 +2,13 @@ apiVersion: v1
 entries:
   stackrox-relay-service:
   - apiVersion: v2
+    created: "2025-10-08T21:24:41.227852199Z"
+    digest: e254f2ea7b01b5dbf859ae958de85391f682e61beb4bd6e6a01da26a148fa288
+    name: stackrox-relay-service
+    urls:
+    - https://github.com/Forma22-Agency/stackrox-relay-service/releases/download/stackrox-relay-service-0.0.4/stackrox-relay-service-0.0.4.tgz
+    version: 0.0.4
+  - apiVersion: v2
     created: "2025-10-08T20:44:40.945149031Z"
     digest: dfc565916244c9b37cbb21350084cb3986cf46041c39cc8c98bd4442ef1ea2a0
     name: stackrox-relay-service
@@ -22,4 +29,4 @@ entries:
     urls:
     - https://github.com/Forma22-Agency/stackrox-relay-service/releases/download/stackrox-relay-service-0.0.1/stackrox-relay-service-0.0.1.tgz
     version: 0.0.1
-generated: "2025-10-08T20:44:40.945161243Z"
+generated: "2025-10-08T21:24:41.227869872Z"
