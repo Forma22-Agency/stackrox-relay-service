@@ -1,6 +1,6 @@
 # stackrox-relay-service
 
-![Version: 0.0.2](https://img.shields.io/badge/Version-0.0.2-informational?style=flat-square)
+![Version: 0.0.3](https://img.shields.io/badge/Version-0.0.3-informational?style=flat-square)
 
 ## Values
 
@@ -50,9 +50,9 @@
 | externalSecrets.data.app.parameters.remoteSecretKey | string | `"stackrox-relay-gh-app-pk"` |  |
 | externalSecrets.data.creationPolicy | string | `"Owner"` |  |
 | externalSecrets.data.kind | string | `"ClusterSecretStore"` |  |
-| externalSecrets.data.name | string | `"gcp-clustersecretstore"` |  |
+| externalSecrets.data.name | string | `"storage"` |  |
 | externalSecrets.data.refreshInterval | string | `"1h"` |  |
-| externalSecrets.data.token.enabled | bool | `true` |  |
+| externalSecrets.data.token.enabled | bool | `false` |  |
 | externalSecrets.data.token.parameters.name | string | `"stackrox-relay-gh-token"` |  |
 | externalSecrets.data.token.parameters.remoteSecretKey | string | `"stackrox-relay-gh-token"` |  |
 | externalSecrets.enabled | bool | `true` |  |
