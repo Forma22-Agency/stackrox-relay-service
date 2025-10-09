@@ -1,10 +1,18 @@
 # app/main.py
 
-import os, json, time, base64
+import os, json, time, base64, logging
 from fastapi import FastAPI, Request, Header, HTTPException
 import httpx
 
 APP = FastAPI()
+
+# --- Logging ---
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+_LEVEL = getattr(logging, LOG_LEVEL, logging.INFO)
+logger = logging.getLogger("stackrox-relay")
+if not logger.handlers:
+    logging.basicConfig(level=_LEVEL, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
+logger.setLevel(_LEVEL)
 
 GH_OWNER = os.getenv("GH_OWNER")
 GH_REPO  = os.getenv("GH_REPO")
@@ -199,7 +207,9 @@ async def healthz():
     # In multi-repo mode GH_REPO may be omitted. Consider only creds.
     creds_ok = bool(GH_TOKEN) or _is_github_app_configured()
     ok = creds_ok
-    return {"status": "ok" if ok else "degraded"}
+    status = "ok" if ok else "degraded"
+    logger.debug("healthz check", extra={"status": status})
+    return {"status": status}
 
 @APP.get("/")
 async def root():
@@ -217,6 +227,7 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
         raise HTTPException(status_code=401, detail="invalid token")
 
     payload = await req.json()
+    logger.info("webhook received")
 
     # Helper to get a nested path safely
     def get_path(obj, path):
@@ -270,6 +281,7 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
         image = find_fullname(payload)
 
     if not image:
+        logger.warning("image not found in payload; cannot proceed")
         raise HTTPException(status_code=400, detail="cannot determine image from webhook payload")
 
     # Extract tag explicitly (if present in payload) or derive from image string
@@ -290,6 +302,7 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
             return None
 
         tag = parse_tag(image)
+    logger.debug("parsed image and tag", extra={"image": image, "tag": tag})
 
     body = {
         "event_type": EVENT_TYPE,
@@ -312,15 +325,23 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
 
     repo_name = _guess_repo_from_image(image)
     if not GH_OWNER or not repo_name:
+        logger.warning("cannot determine target repository", extra={"gh_owner_set": bool(GH_OWNER), "repo_basename": repo_name})
         raise HTTPException(status_code=400, detail="cannot determine target repository: need GH_OWNER and image basename")
 
     owner, repo = GH_OWNER, repo_name
     async with httpx.AsyncClient(timeout=30.0) as client:
-        if ALLOWED_TOPICS and not await _repo_topics_allow(client, owner, repo):
-            raise HTTPException(status_code=403, detail="repository is not allowed by topics policy")
+        if ALLOWED_TOPICS:
+            logger.debug("checking topics policy", extra={"owner": owner, "repo": repo, "mode": ALLOWED_TOPICS_MODE, "required_topics": ALLOWED_TOPICS})
+            if not await _repo_topics_allow(client, owner, repo):
+                logger.warning("repository denied by topics policy", extra={"owner": owner, "repo": repo})
+                raise HTTPException(status_code=403, detail="repository is not allowed by topics policy")
         headers = await _build_github_headers(client, owner, repo)
         url = f"https://api.github.com/repos/{owner}/{repo}/dispatches"
+        logger.info("dispatching repository_dispatch", extra={"owner": owner, "repo": repo, "event_type": EVENT_TYPE})
         r = await client.post(url, headers=headers, content=json.dumps(body))
         if r.status_code != 204:
+            snippet = r.text[:500] if isinstance(r.text, str) else str(r.text)
+            logger.error("dispatch failed", extra={"owner": owner, "repo": repo, "status": r.status_code, "response": snippet})
             raise HTTPException(status_code=r.status_code, detail=r.text)
+    logger.info("dispatch succeeded", extra={"owner": owner, "repo": repo})
     return {"ok": True, "repository": f"{owner}/{repo}"}
