@@ -62,6 +62,8 @@ configmap:
   ACS_WEBHOOK_SECRET: ""
   # optional, if you want to use a GitHub PAT token without a external secret
   GH_TOKEN: ""
+  # optional, if you want to use a logging level
+  LOG_LEVEL: "DEBUG"
 
 # Use external secrets for the app secrets
 externalSecrets:
