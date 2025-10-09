@@ -1,6 +1,6 @@
 # stackrox-relay-service
 
-![Version: 0.0.6](https://img.shields.io/badge/Version-0.0.6-informational?style=flat-square)
+![Version: 0.0.7](https://img.shields.io/badge/Version-0.0.7-informational?style=flat-square)
 
 ## Values
 
@@ -13,6 +13,7 @@
 | configmap.GH_OWNER | string | `"forma22-agency"` |  |
 | configmap.GH_TOKEN | string | `""` |  |
 | configmap.GITHUB_API_VERSION | string | `"2022-11-28"` |  |
+| configmap.LOG_LEVEL | string | `"DEBUG"` |  |
 | deployment.containerSecurityContext.allowPrivilegeEscalation | bool | `false` |  |
 | deployment.containerSecurityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | deployment.containerSecurityContext.privileged | bool | `false` |  |
