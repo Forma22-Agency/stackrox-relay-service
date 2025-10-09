@@ -337,11 +337,32 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
                 raise HTTPException(status_code=403, detail="repository is not allowed by topics policy")
         headers = await _build_github_headers(client, owner, repo)
         url = f"https://api.github.com/repos/{owner}/{repo}/dispatches"
-        logger.info("dispatching repository_dispatch", extra={"owner": owner, "repo": repo, "event_type": EVENT_TYPE})
-        r = await client.post(url, headers=headers, content=json.dumps(body))
+        # Log what we send to GitHub (no credentials): URL and JSON body
+        try:
+            safe_body = json.dumps(body)
+        except Exception:
+            safe_body = str(body)
+        logger.info(
+            "dispatching repository_dispatch",
+            extra={"owner": owner, "repo": repo, "event_type": EVENT_TYPE}
+        )
+        logger.debug(
+            "dispatch request payload",
+            extra={"url": url, "body": safe_body[:2000]}  # truncate to avoid huge logs
+        )
+        r = await client.post(url, headers=headers, content=safe_body)
         if r.status_code != 204:
             snippet = r.text[:500] if isinstance(r.text, str) else str(r.text)
-            logger.error("dispatch failed", extra={"owner": owner, "repo": repo, "status": r.status_code, "response": snippet})
+            logger.error(
+                "dispatch failed",
+                extra={
+                    "owner": owner,
+                    "repo": repo,
+                    "status": r.status_code,
+                    "response": snippet,
+                    "request_body": safe_body[:1000],
+                }
+            )
             raise HTTPException(status_code=r.status_code, detail=r.text)
     logger.info("dispatch succeeded", extra={"owner": owner, "repo": repo})
     return {"ok": True, "repository": f"{owner}/{repo}"}
