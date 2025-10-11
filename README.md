@@ -13,6 +13,15 @@ Core:
 - `EVENT_TYPE` (optional): Event name for `repository_dispatch`. Default: `stackrox_copa`.
 - `ACS_WEBHOOK_SECRET` (optional but recommended): Shared secret for inbound webhook; must be sent as `X-ACS-TOKEN` header.
 
+Deduplication (to avoid duplicate dispatches):
+
+- `RELAY_DEDUP_ENABLED` (default: `true`): enables request deduplication.
+- `RELAY_DEDUP_TTL_SECONDS` (default: `180`): time window to suppress duplicates.
+- `REDIS_URL` (optional): if set, Redis is used for cross-pod dedup; otherwise an in-memory fallback is used (only protects a single pod).
+
+Dedup key includes: `GH_OWNER`, derived repository name (image basename), `EVENT_TYPE`, `image`, and `tag` (or `latest`).
+On GitHub 5xx errors the dedup key is released to allow retries; on 2xx it remains until TTL.
+
 Multi-repo (by repository topics):
 
 - `GH_ALLOWED_TOPICS` (optional): Comma-separated list of topics. If set, the relay will only dispatch to repositories that have these topics. If empty, any repository is allowed (subject to credentials).

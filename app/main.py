@@ -1,6 +1,6 @@
 # app/main.py
 
-import os, json, time, base64, logging
+import os, json, time, base64, logging, hashlib
 from fastapi import FastAPI, Request, Header, HTTPException
 import httpx
 
@@ -20,6 +20,14 @@ GH_TOKEN = os.getenv("GH_TOKEN")
 EVENT_TYPE = os.getenv("EVENT_TYPE", "stackrox_copa")
 API_VER = os.getenv("GITHUB_API_VERSION", "2022-11-28")
 ACS_WEBHOOK_SECRET = os.getenv("ACS_WEBHOOK_SECRET", "")
+
+# --- Deduplication settings ---
+RELAY_DEDUP_ENABLED = os.getenv("RELAY_DEDUP_ENABLED", "true").lower() in {"1", "true", "yes"}
+try:
+    RELAY_DEDUP_TTL_SECONDS = int(os.getenv("RELAY_DEDUP_TTL_SECONDS", "180"))
+except Exception:
+    RELAY_DEDUP_TTL_SECONDS = 180
+REDIS_URL = os.getenv("REDIS_URL", "")
 
 # Multi-repo guard by topics (comma-separated list). If set, only repos
 # containing at least one (or all, depending on mode) of these topics will be allowed.
@@ -43,6 +51,77 @@ if GITHUB_APP_INSTALLATION_ID and GH_OWNER:
         _CACHED_INSTALLATION_ID_BY_OWNER[GH_OWNER] = int(GITHUB_APP_INSTALLATION_ID)
     except Exception:
         pass
+
+# --- Deduplication state ---
+_DEDUP_CACHE: dict[str, float] = {}  # key -> expires_at (epoch)
+_REDIS_CLIENT = None
+
+async def _get_redis_client():
+    global _REDIS_CLIENT
+    if not REDIS_URL:
+        return None
+    if _REDIS_CLIENT is not None:
+        return _REDIS_CLIENT
+    try:
+        from redis.asyncio import Redis  # type: ignore
+    except Exception as exc:
+        logger.warning("redis package not available, falling back to in-memory dedup", extra={"error": str(exc)})
+        return None
+    try:
+        _REDIS_CLIENT = Redis.from_url(REDIS_URL, encoding="utf-8", decode_responses=True)
+    except Exception as exc:
+        logger.error("failed to init redis client, falling back to in-memory dedup", extra={"error": str(exc)})
+        _REDIS_CLIENT = None
+    return _REDIS_CLIENT
+
+def _build_dedup_key(owner: str, repo: str, image: str, tag: str | None) -> str:
+    tag_part = tag or "latest"
+    raw = f"{owner}:{repo}:{EVENT_TYPE}:{image}:{tag_part}"
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return f"relay:dedup:{digest}"
+
+async def _dedup_should_skip(key: str) -> bool:
+    if not RELAY_DEDUP_ENABLED:
+        return False
+    now = time.time()
+    # Try Redis first
+    client = await _get_redis_client()
+    if client is not None:
+        try:
+            # NX + EX TTL seconds; True if created, None if exists
+            created = await client.set(key, "1", ex=RELAY_DEDUP_TTL_SECONDS, nx=True)
+            if not created:
+                logger.info("dedup hit (redis)", extra={"key": key})
+                return True
+            logger.debug("dedup key created (redis)", extra={"key": key, "ttl": RELAY_DEDUP_TTL_SECONDS})
+            return False
+        except Exception as exc:
+            logger.error("redis error, falling back to in-memory dedup", extra={"error": str(exc)})
+    # In-memory fallback
+    # purge expired
+    to_delete = [k for k, exp in _DEDUP_CACHE.items() if exp <= now]
+    for k in to_delete:
+        _DEDUP_CACHE.pop(k, None)
+    if key in _DEDUP_CACHE:
+        logger.info("dedup hit (memory)", extra={"key": key})
+        return True
+    _DEDUP_CACHE[key] = now + RELAY_DEDUP_TTL_SECONDS
+    logger.debug("dedup key created (memory)", extra={"key": key, "ttl": RELAY_DEDUP_TTL_SECONDS})
+    return False
+
+async def _dedup_release_on_failure(key: str):
+    if not RELAY_DEDUP_ENABLED:
+        return
+    client = await _get_redis_client()
+    if client is not None:
+        try:
+            await client.delete(key)
+            logger.debug("dedup key removed (redis)", extra={"key": key})
+            return
+        except Exception as exc:
+            logger.warning("failed to remove dedup key in redis", extra={"error": str(exc)})
+    _DEDUP_CACHE.pop(key, None)
+    logger.debug("dedup key removed (memory)", extra={"key": key})
 
 def _is_github_app_configured() -> bool:
     return bool(GITHUB_APP_ID and (GITHUB_APP_PRIVATE_KEY or GITHUB_APP_PRIVATE_KEY_BASE64))
@@ -329,6 +408,11 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
         raise HTTPException(status_code=400, detail="cannot determine target repository: need GH_OWNER and image basename")
 
     owner, repo = GH_OWNER, repo_name
+    # Deduplication guard: skip duplicates within TTL window
+    dedup_key = _build_dedup_key(owner, repo, image, tag)
+    if await _dedup_should_skip(dedup_key):
+        logger.info("request deduplicated; skipping dispatch", extra={"owner": owner, "repo": repo})
+        return {"ok": True, "repository": f"{owner}/{repo}", "deduped": True}
     async with httpx.AsyncClient(timeout=30.0) as client:
         if ALLOWED_TOPICS:
             logger.debug("checking topics policy", extra={"owner": owner, "repo": repo, "mode": ALLOWED_TOPICS_MODE, "required_topics": ALLOWED_TOPICS})
@@ -363,6 +447,9 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
                     "request_body": safe_body[:1000],
                 }
             )
+            # On server errors allow retry by removing dedup key
+            if 500 <= r.status_code < 600:
+                await _dedup_release_on_failure(dedup_key)
             raise HTTPException(status_code=r.status_code, detail=r.text)
     logger.info("dispatch succeeded", extra={"owner": owner, "repo": repo})
-    return {"ok": True, "repository": f"{owner}/{repo}"}
+    return {"ok": True, "repository": f"{owner}/{repo}", "deduped": False}
