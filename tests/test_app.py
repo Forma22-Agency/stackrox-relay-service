@@ -4,7 +4,7 @@ import respx
 from httpx import Response
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("GH_OWNER", "acme")
+os.environ.setdefault("GH_OWNER", "forma22-agency")
 os.environ.setdefault("EVENT_TYPE", "stackrox_copa")
 os.environ.setdefault("LOG_LEVEL", "DEBUG")
 os.environ.setdefault("RELAY_DEDUP_ENABLED", "false")
@@ -48,7 +48,7 @@ def test_webhook_success_without_topics(client, monkeypatch):
     assert r.status_code == 200
     j = r.json()
     assert j.get("ok") is True
-    assert j.get("repository") == "acme/mysvc"
+    assert j.get("repository") == "forma22-agency/stackrox-relay-service"
 
 
 @respx.mock
