@@ -1,6 +1,6 @@
 # stackrox-relay-service
 
-![Version: 0.0.8](https://img.shields.io/badge/Version-0.0.8-informational?style=flat-square)
+![Version: 0.0.9](https://img.shields.io/badge/Version-0.0.9-informational?style=flat-square)
 
 ## Values
 
@@ -14,6 +14,9 @@
 | configmap.GH_TOKEN | string | `""` |  |
 | configmap.GITHUB_API_VERSION | string | `"2022-11-28"` |  |
 | configmap.LOG_LEVEL | string | `"DEBUG"` |  |
+| configmap.REDIS_URL | string | `""` |  |
+| configmap.RELAY_DEDUP_ENABLED | string | `"false"` |  |
+| configmap.RELAY_DEDUP_TTL_SECONDS | string | `"180"` |  |
 | deployment.containerSecurityContext.allowPrivilegeEscalation | bool | `false` |  |
 | deployment.containerSecurityContext.capabilities.drop[0] | string | `"ALL"` |  |
 | deployment.containerSecurityContext.privileged | bool | `false` |  |
