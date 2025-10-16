@@ -48,7 +48,7 @@ deployment:
 
 # Use plain text values for the app secrets
 configmap:
-  GH_OWNER: "forma22-agency"
+  GH_OWNER: ""
   # Repo where replay need access to dispatch events
   GITHUB_API_VERSION: "2022-11-28"
   EVENT_TYPE: "stackrox_copa"
@@ -60,9 +60,9 @@ configmap:
   # Optional: allow multi-repo mode by GitHub repository topics
   # Comma-separated list of topics that must be present on target repo.
   # If empty, any repo is allowed (subject to credentials).
-  GH_ALLOWED_TOPICS: "stackrox-copa"
+  GH_ALLOWED_TOPICS: ""
   # one of: any | all
-  GH_ALLOWED_TOPICS_MODE: "any"
+  GH_ALLOWED_TOPICS_MODE: "all"
   # Optional: random secret for StackRox webhook
   ACS_WEBHOOK_SECRET: ""
   # optional, if you want to use a GitHub PAT token without a external secret

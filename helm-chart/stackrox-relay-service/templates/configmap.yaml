@@ -5,9 +5,15 @@ metadata:
   labels:
   {{- include "stackrox-relay-service.labels" . | nindent 4 }}
 data:
+  {{ if .Values.configmap.GH_OWNER }}
   GH_OWNER: "{{ .Values.configmap.GH_OWNER }}"
+  {{ end }}
+  {{ if .Values.configmap.GH_ALLOWED_TOPICS }}
   GH_ALLOWED_TOPICS: "{{ .Values.configmap.GH_ALLOWED_TOPICS }}"
+  {{ end }}
+  {{ if .Values.configmap.GH_ALLOWED_TOPICS_MODE }}
   GH_ALLOWED_TOPICS_MODE: "{{ .Values.configmap.GH_ALLOWED_TOPICS_MODE }}"
+  {{ end }}
   GITHUB_API_VERSION: "{{ .Values.configmap.GITHUB_API_VERSION }}"
   EVENT_TYPE: "{{ .Values.configmap.EVENT_TYPE }}"
   {{ if .Values.configmap.RELAY_DEDUP_ENABLED }}
@@ -21,3 +27,4 @@ data:
   {{ if .Values.configmap.GH_TOKEN }}
   GH_TOKEN: "{{ .Values.configmap.GH_TOKEN }}"
   {{ end }}
+  LOG_LEVEL: "{{ .Values.configmap.LOG_LEVEL }}"
