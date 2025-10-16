@@ -1,6 +1,6 @@
 # stackrox-relay-service
 
-![Version: 0.0.11](https://img.shields.io/badge/Version-0.0.11-informational?style=flat-square)
+![Version: 0.0.12](https://img.shields.io/badge/Version-0.0.12-informational?style=flat-square)
 
 ## Values
 
@@ -8,9 +8,9 @@
 |-----|------|---------|-------------|
 | configmap.ACS_WEBHOOK_SECRET | string | `""` |  |
 | configmap.EVENT_TYPE | string | `"stackrox_copa"` |  |
-| configmap.GH_ALLOWED_TOPICS | string | `"stackrox-copa"` |  |
-| configmap.GH_ALLOWED_TOPICS_MODE | string | `"any"` |  |
-| configmap.GH_OWNER | string | `"forma22-agency"` |  |
+| configmap.GH_ALLOWED_TOPICS | string | `""` |  |
+| configmap.GH_ALLOWED_TOPICS_MODE | string | `"all"` |  |
+| configmap.GH_OWNER | string | `""` |  |
 | configmap.GH_TOKEN | string | `""` |  |
 | configmap.GITHUB_API_VERSION | string | `"2022-11-28"` |  |
 | configmap.LOG_LEVEL | string | `"DEBUG"` |  |
