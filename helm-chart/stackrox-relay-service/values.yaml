@@ -69,6 +69,8 @@ configmap:
   GH_TOKEN: ""
   # optional, if you want to use a logging level
   LOG_LEVEL: "DEBUG"
+  # optional, if you want to enable debug payload logging
+  RELAY_DEBUG_PAYLOAD: "false"
 
 # Use external secrets for the app secrets
 externalSecrets:

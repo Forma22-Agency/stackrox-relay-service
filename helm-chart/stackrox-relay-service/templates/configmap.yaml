@@ -28,3 +28,4 @@ data:
   GH_TOKEN: "{{ .Values.configmap.GH_TOKEN }}"
   {{ end }}
   LOG_LEVEL: "{{ .Values.configmap.LOG_LEVEL }}"
+  RELAY_DEBUG_PAYLOAD: "{{ .Values.configmap.RELAY_DEBUG_PAYLOAD }}"
