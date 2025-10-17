@@ -21,13 +21,6 @@ EVENT_TYPE = os.getenv("EVENT_TYPE", "stackrox_copa")
 API_VER = os.getenv("GITHUB_API_VERSION", "2022-11-28")
 ACS_WEBHOOK_SECRET = os.getenv("ACS_WEBHOOK_SECRET", "")
 
-# --- Debug payload logging (one-shot) ---
-_DEBUG_PAYLOAD_ONCE = os.getenv("RELAY_DEBUG_PAYLOAD", "false").lower() in {"1", "true", "yes"}
-try:
-    _DEBUG_PAYLOAD_MAX = int(os.getenv("RELAY_DEBUG_PAYLOAD_MAX", "4000"))
-except Exception:
-    _DEBUG_PAYLOAD_MAX = 4000
-
 # --- Deduplication settings ---
 RELAY_DEDUP_ENABLED = os.getenv("RELAY_DEDUP_ENABLED", "true").lower() in {"1", "true", "yes"}
 try:
@@ -342,14 +335,13 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
     payload = await req.json()
     logger.info("webhook received")
 
-    # Optional debug logging of the raw payload (full, no truncation)
-    global _DEBUG_PAYLOAD_ONCE
-    if _DEBUG_PAYLOAD_ONCE:
+    # Debug logging of the raw payload when log level is DEBUG
+    if logger.isEnabledFor(logging.DEBUG):
         try:
             as_text = json.dumps(payload, ensure_ascii=False)
-            logger.warning("debug webhook payload", extra={"payload": as_text})
+            logger.debug("webhook payload", extra={"payload": as_text})
         except Exception as exc:
-            logger.warning("failed to serialize webhook payload for debug", extra={"error": str(exc)})
+            logger.debug("failed to serialize webhook payload for debug", extra={"error": str(exc)})
 
     # Helper to get a nested path safely
     def get_path(obj, path):
