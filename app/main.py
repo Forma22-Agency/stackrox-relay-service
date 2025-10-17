@@ -21,6 +21,13 @@ EVENT_TYPE = os.getenv("EVENT_TYPE", "stackrox_copa")
 API_VER = os.getenv("GITHUB_API_VERSION", "2022-11-28")
 ACS_WEBHOOK_SECRET = os.getenv("ACS_WEBHOOK_SECRET", "")
 
+# --- Debug payload logging (one-shot) ---
+_DEBUG_PAYLOAD_ONCE = os.getenv("RELAY_DEBUG_PAYLOAD", "false").lower() in {"1", "true", "yes"}
+try:
+    _DEBUG_PAYLOAD_MAX = int(os.getenv("RELAY_DEBUG_PAYLOAD_MAX", "4000"))
+except Exception:
+    _DEBUG_PAYLOAD_MAX = 4000
+
 # --- Deduplication settings ---
 RELAY_DEDUP_ENABLED = os.getenv("RELAY_DEDUP_ENABLED", "true").lower() in {"1", "true", "yes"}
 try:
@@ -74,6 +81,30 @@ async def _get_redis_client():
         _REDIS_CLIENT = None
     return _REDIS_CLIENT
 
+def _sanitize_for_logging(obj):
+    """Best-effort scrubbing of sensitive-looking keys before logging."""
+    sensitive_keys = {
+        "password",
+        "token",
+        "authorization",
+        "secret",
+        "apikey",
+        "api_key",
+        "privatekey",
+        "private_key",
+    }
+    if isinstance(obj, dict):
+        sanitized = {}
+        for k, v in obj.items():
+            if isinstance(k, str) and k.lower() in sensitive_keys:
+                sanitized[k] = "***"
+            else:
+                sanitized[k] = _sanitize_for_logging(v)
+        return sanitized
+    if isinstance(obj, list):
+        return [_sanitize_for_logging(i) for i in obj]
+    return obj
+
 def _build_dedup_key(owner: str, repo: str, image: str, tag: str | None) -> str:
     tag_part = tag or "latest"
     raw = f"{owner}:{repo}:{EVENT_TYPE}:{image}:{tag_part}"
@@ -82,12 +113,14 @@ def _build_dedup_key(owner: str, repo: str, image: str, tag: str | None) -> str:
 
 async def _dedup_should_skip(key: str) -> bool:
     if not RELAY_DEDUP_ENABLED:
+        logger.debug("dedup disabled; bypassing", extra={"key": key})
         return False
     now = time.time()
     # Try Redis first
     client = await _get_redis_client()
     if client is not None:
         try:
+            logger.debug("dedup check via redis", extra={"key": key, "ttl": RELAY_DEDUP_TTL_SECONDS})
             # NX + EX TTL seconds; True if created, None if exists
             created = await client.set(key, "1", ex=RELAY_DEDUP_TTL_SECONDS, nx=True)
             if not created:
@@ -98,6 +131,7 @@ async def _dedup_should_skip(key: str) -> bool:
         except Exception as exc:
             logger.error("redis error, falling back to in-memory dedup", extra={"error": str(exc)})
     # In-memory fallback
+    logger.debug("dedup check via memory", extra={"key": key, "ttl": RELAY_DEDUP_TTL_SECONDS})
     # purge expired
     to_delete = [k for k, exp in _DEDUP_CACHE.items() if exp <= now]
     for k in to_delete:
@@ -308,6 +342,20 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
     payload = await req.json()
     logger.info("webhook received")
 
+    # Optional one-shot debug logging of the raw payload (sanitized)
+    global _DEBUG_PAYLOAD_ONCE
+    if _DEBUG_PAYLOAD_ONCE:
+        try:
+            safe_payload = _sanitize_for_logging(payload)
+            as_text = json.dumps(safe_payload, ensure_ascii=False)
+            if len(as_text) > _DEBUG_PAYLOAD_MAX:
+                as_text = as_text[: _DEBUG_PAYLOAD_MAX] + "...[truncated]"
+            logger.warning("debug webhook payload (one-shot)", extra={"payload": as_text})
+        except Exception as exc:
+            logger.warning("failed to serialize webhook payload for debug", extra={"error": str(exc)})
+        finally:
+            _DEBUG_PAYLOAD_ONCE = False
+
     # Helper to get a nested path safely
     def get_path(obj, path):
         cur = obj
@@ -410,6 +458,17 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
     owner, repo = GH_OWNER, repo_name
     # Deduplication guard: skip duplicates within TTL window
     dedup_key = _build_dedup_key(owner, repo, image, tag)
+    logger.debug("dedup candidate", extra={
+        "owner": owner,
+        "repo": repo,
+        "image": image,
+        "tag": tag or "latest",
+        "event_type": EVENT_TYPE,
+        "key": dedup_key,
+        "enabled": RELAY_DEDUP_ENABLED,
+        "redis": bool(REDIS_URL),
+        "ttl": RELAY_DEDUP_TTL_SECONDS,
+    })
     if await _dedup_should_skip(dedup_key):
         logger.info("request deduplicated; skipping dispatch", extra={"owner": owner, "repo": repo})
         return {"ok": True, "repository": f"{owner}/{repo}", "deduped": True}
@@ -449,6 +508,7 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
             )
             # On server errors allow retry by removing dedup key
             if 500 <= r.status_code < 600:
+                logger.info("releasing dedup key due to 5xx", extra={"key": dedup_key, "status": r.status_code})
                 await _dedup_release_on_failure(dedup_key)
             raise HTTPException(status_code=r.status_code, detail=r.text)
     logger.info("dispatch succeeded", extra={"owner": owner, "repo": repo})
