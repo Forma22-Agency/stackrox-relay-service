@@ -342,19 +342,14 @@ async def webhook(req: Request, x_acs_token: str | None = Header(None)):
     payload = await req.json()
     logger.info("webhook received")
 
-    # Optional one-shot debug logging of the raw payload (sanitized)
+    # Optional debug logging of the raw payload (full, no truncation)
     global _DEBUG_PAYLOAD_ONCE
     if _DEBUG_PAYLOAD_ONCE:
         try:
-            safe_payload = _sanitize_for_logging(payload)
-            as_text = json.dumps(safe_payload, ensure_ascii=False)
-            if len(as_text) > _DEBUG_PAYLOAD_MAX:
-                as_text = as_text[: _DEBUG_PAYLOAD_MAX] + "...[truncated]"
-            logger.warning("debug webhook payload (one-shot)", extra={"payload": as_text})
+            as_text = json.dumps(payload, ensure_ascii=False)
+            logger.warning("debug webhook payload", extra={"payload": as_text})
         except Exception as exc:
             logger.warning("failed to serialize webhook payload for debug", extra={"error": str(exc)})
-        finally:
-            _DEBUG_PAYLOAD_ONCE = False
 
     # Helper to get a nested path safely
     def get_path(obj, path):
